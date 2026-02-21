@@ -221,6 +221,82 @@ updated_at: {timestamp}
         print(f"✅ Issue #{issue_id} 已关闭")
         return issue
     
+    def sync(self):
+        """同步 index.json 与实际文件目录状态"""
+        import re
+        
+        status_dirs = {
+            "open": self.open_dir,
+            "in-progress": self.in_progress_dir,
+            "closed": self.closed_dir,
+        }
+        
+        file_status = {}
+        for status, dir_path in status_dirs.items():
+            for f in dir_path.glob("*.md"):
+                m = re.match(r'^(\d+)-', f.name)
+                if m:
+                    iid = int(m.group(1))
+                    file_status[iid] = (status, str(f.relative_to(self.workspace)))
+        
+        fixed = 0
+        orphans = 0
+        
+        for issue in self.index["issues"]:
+            iid = issue["id"]
+            if iid in file_status:
+                actual_status, actual_file = file_status[iid]
+                if issue["status"] != actual_status or issue.get("file") != actual_file:
+                    old_status = issue["status"]
+                    issue["status"] = actual_status
+                    issue["file"] = actual_file
+                    if actual_status == "closed" and "closed_at" not in issue:
+                        issue["closed_at"] = datetime.now().isoformat()
+                    print(f"  🔧 #{iid:03d} {old_status} → {actual_status}")
+                    fixed += 1
+                del file_status[iid]
+            else:
+                if issue["status"] != "closed":
+                    print(f"  ⚠️ #{iid:03d} 文件不存在，标记 closed")
+                    issue["status"] = "closed"
+                    issue["closed_at"] = datetime.now().isoformat()
+                    fixed += 1
+        
+        for iid, (status, filepath) in file_status.items():
+            full_path = self.workspace / filepath
+            title = f"(孤儿 Issue #{iid})"
+            try:
+                content = full_path.read_text(encoding='utf-8')
+                m = re.search(r'^title:\s*(.+)$', content, re.MULTILINE)
+                if m:
+                    title = m.group(1).strip()
+            except:
+                pass
+            
+            self.index["issues"].append({
+                "id": iid, "title": title, "status": status,
+                "file": filepath, "priority": "P2", "labels": [],
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+            })
+            print(f"  ➕ #{iid:03d} 孤儿文件纳入 index ({status})")
+            orphans += 1
+            if iid >= self.index["next_id"]:
+                self.index["next_id"] = iid + 1
+        
+        self.save_index()
+        
+        total = len(self.index["issues"])
+        by_status = {}
+        for issue in self.index["issues"]:
+            s = issue["status"]
+            by_status[s] = by_status.get(s, 0) + 1
+        
+        print(f"\n📊 同步完成: 修正 {fixed} 个, 新增孤儿 {orphans} 个")
+        print(f"   总计 {total} 个: ", end="")
+        print(" | ".join(f"{s}: {c}" for s, c in sorted(by_status.items())))
+        return {"fixed": fixed, "orphans": orphans, "total": total, "by_status": by_status}
+    
     def stats(self):
         """统计概览"""
         total = len(self.index["issues"])
@@ -275,6 +351,9 @@ def main():
     # stats
     sub.add_parser("stats")
     
+    # sync
+    sub.add_parser("sync")
+    
     args = parser.parse_args()
     mgr = IssueManager()
     
@@ -299,6 +378,8 @@ def main():
         mgr.assign(args.issue_id, args.assignee)
     elif args.cmd == "close":
         mgr.close(args.issue_id, args.resolution)
+    elif args.cmd == "sync":
+        mgr.sync()
     elif args.cmd == "stats":
         s = mgr.stats()
         print(f"\n📊 Issue 统计")
