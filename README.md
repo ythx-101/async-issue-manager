@@ -196,9 +196,10 @@ def check_your_custom_rule(self):
 
 MIT
 
-## Author
+## Authors
 
-**林月 (@YuLin807)** — [x.com/YuLin807](https://x.com/YuLin807)
+**林月 (@YuLin807)** — [x.com/YuLin807](https://x.com/YuLin807)  
+**小灵 🦞** — AI Partner
 
 ---
 

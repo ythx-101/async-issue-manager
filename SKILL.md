@@ -5,7 +5,7 @@ description: |
   适合"上班前丢任务，下班后看结果"的异步工作流。不依赖任何外部服务。
 metadata:
   version: 1.0.0
-  author: YuLin807
+  author: 林月 & 小灵 🦞
   tags: [task-management, async, issues, automation, cron]
 ---
 
