@@ -152,7 +152,7 @@ python3 scripts/manager.py close 35 --resolution "分析报告已生成，见 da
 2. 广播所有 open Issues 给匹配的 Agent
 3. 触发主 Agent 判断派活
 
-**调度逻辑**：主 Agent（如 Opus）读取 open Issues，根据标签和优先级判断派给哪个子 Agent 执行。不是死板的规则路由，而是智能判断。
+**调度逻辑**：主 Agent 读取 open Issues，根据标签和优先级判断派给哪个子 Agent 执行。不是死板的规则路由，而是智能判断。
 
 ### 巡查系统（每天 2 次）
 
